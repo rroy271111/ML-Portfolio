@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "credit_card_fraud_detection_system"
+version = "0.1.0"
+description = "Credit card fraud detection system"
+authors = [{ name = "Raj" }]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "pandas",
+    "scikit-learn",
+    "xgboost"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,0 +1,53 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# Logs
+logs/
+*.log
+
+# Models, large binaries
+*.pkl
+*.h5
+*.pt
+*.onnx
+models/
+saved_models/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDEs 
+.vscode/
+.idea/
+
+# Build / dist
+build/
+dist/
+*.egg-info/
+
+# Data and intermediate files
+data/
+datasets/
+
+# Environment variables
+.env
+
+# MLflow or monitoring artifacts
+mlruns/
+monitoring/mlflow/
+
+# Docker-related
+*.pid
+

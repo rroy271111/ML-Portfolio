@@ -1,0 +1,28 @@
+version: '3.9'
+
+services:
+  fraud-detection:
+    build:
+      context: ./src/serving
+      dockerfile: Dockerfile
+    container_name: fraud_detection_service
+    ports:
+      - "8080-8080"
+    volumes:
+      - ./src/models:/app/models
+    environment:
+      - MODEL_PATH=/app/models/ensemble_model.pkl
+      - THRESHOLDS_PATH=/app/models/per_segment_thresholds.csv
+    restart: unless-stopped
+  
+  notebook:
+    image: jupyter/scipy-notebook:latest
+    container_name: fraud_notebook
+    ports:
+      - "8888:8888"
+    volumes:
+      - .:/home/jovyan/work
+    command: ["start-notebook.sh", --NotebookApp.token='']
+    restart: unless-stopped
+    
+

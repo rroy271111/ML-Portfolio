@@ -1,0 +1,28 @@
+data:
+  mode: "synthetic" # "synthetic" or "file"
+  num_rows: 5000 # used when the mode == synthetic
+  file_path: "data/train.csv" # used when mode == file
+  target_col: "label"
+  test_size: 0.2
+  random_state: 42
+
+model:
+  type: "xgboost"
+  trainer_path: "src.trainers.xgb_trainer"
+  out_path: "src/models/saved_models/xgb_model.pkl"
+  params:
+    n_estimators: 200
+    max_depth: 6
+    learning_rate: 0.05
+    eval_metric: logloss
+    early_stopping_rounds: 20
+
+logging:
+  level: INFO
+  log_dir: logs
+  to_file: true
+
+mlflow:
+  enabled: false
+  tracking_uri: "file:./mlruns"
+  experiment_name: "credit-fraud"
