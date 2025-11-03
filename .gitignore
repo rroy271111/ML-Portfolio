@@ -21,7 +21,7 @@ logs/
 *.h5
 *.pt
 *.onnx
-models/
+#models/
 saved_models/
 
 # OS files
