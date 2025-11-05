@@ -22,6 +22,30 @@ def __generator_synthetic(num_rows: int) -> pd.DataFrame:
         raise ImportError("Synthetic data generator not available: " + str(exc))    
     return generate_synthetic_transactions(num_rows=num_rows)
 
+
+# Preprocessing before training
+def preprocess(df: pd.DataFrame, logger=None) -> pd.DataFrame:
+    """Convert non-numeric columns (timestamp, ip, etc.) to usable features."""
+    df = df.copy()
+
+    # Convert timestamp to useful numeric features
+    if "timestamp" in df.columns and pd.api.types.is_datetime64_any_dtype(df["timestamp"]):
+        if logger:
+            logger.debug("Extracting timestamp features (hour, day, month).")
+        df["hour"] = df["timestamp"].dt.hour
+        df["day"] = df["timestamp"].dt.day
+        df["month"] = df["timestamp"].dt.month
+        df = df.drop(columns=["timestamp"])
+
+    # Convert IP (or any object column) to categorical codes
+    for col in df.select_dtypes(include=["object"]).columns:
+        if logger:
+            logger.debug(f"Encoding object column '{col}' as categorical codes.")
+        df[col] = df[col].astype("category").cat.codes
+
+    return df
+
+
 def get_data(data_config: Dict[str, Any], logger=None) -> pd.DataFrame:
     mode = data_config.get("mode", "synthetic")
     if mode == "synthetic":
@@ -38,6 +62,7 @@ def get_data(data_config: Dict[str, Any], logger=None) -> pd.DataFrame:
         df = pd.read_csv(path)
     else:
         raise ValueError(f"Unknown data.mode: {mode}")
+    df = preprocess(df, logger=logger)
     return df
 
 def train_val_split(df:pd.DataFrame, data_config: Dict[str, Any], logger=None) -> Tuple[pd.DataFrame, pd.Series]:

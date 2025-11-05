@@ -10,24 +10,34 @@ from typing import Any, Dict, Optional, Tuple
 import yaml
 
 from utils.logger import get_logger
-from utils.data import get_data, train_test_split, save_model
+from utils.data import get_data, train_val_split, save_model
 from utils.metrics import compute_pr_auc
 from utils.mlflow_utils import mlflow_start_run_if_enabled
+
 
 def load_config(path: str) -> Dict[str, Any]:
     p = Path(path)
     if not p.exists():
         raise FileNotFoundError(f"Config not found: {p}")
     with p.open("r") as fh:
-        return yaml.safe_load(fh)
+        cfg = yaml.safe_load(fh)
+        if not isinstance(cfg, dict):
+            raise ValueError(f"Invalid config format: expected dict, got {type(cfg)}")
+        return cfg
+
 
 def import_trainer(trainer_path: str):
-    mod = importlib.import_module(trainer_path)
+    try:
+        mod = importlib.import_module(trainer_path)
+    except ModuleNotFoundError as e:
+        raise ImportError(f"Trainer module not found: {trainer_path}") from e
+
     if not hasattr(mod, "train"):
-        raise ImportError(f"Trainer {trainer_path} must expose train(df, config, logger)")
+        raise ImportError(f"Trainer {trainer_path} must expose train(X_train, y_train, X_val, y_val, config, logger)")
     return getattr(mod, "train")
 
-def run(cfg_path: str) -> None:
+
+def run(cfg_path: str) -> Dict[str, Any]:
     config = load_config(cfg_path)
     logger = get_logger("itrain", cfg=config.get("logging", {}))
     logger.info("Starting itrain")
@@ -36,15 +46,18 @@ def run(cfg_path: str) -> None:
     if not trainer_path:
         logger.error("model.trainer_path missing in config")
         raise KeyError("model.trainer_path")
-    
+
     df = get_data(config.get("data", {}), logger=logger)
-    logger.info("Loaded data shape: %s", getattr(df, "shape", None))    
+    logger.info("Loaded data shape: %s", getattr(df, "shape", None))
 
     X_train, X_val, y_train, y_val = train_val_split(df, config.get("data", {}), logger=logger)
-    logger.info("Split shapes: train=%s val=%s", getattr(X_train,"shape", None), getattr(X_val, "shape", None))
+    logger.info(
+        "Split shapes: train=%s val=%s", getattr(X_train, "shape", None), getattr(X_val, "shape", None)
+    )
 
     trainer_fn = import_trainer(trainer_path)
 
+    metrics: Dict[str, Any] = {}
     with mlflow_start_run_if_enabled(config.get("mlflow", {}), logger=logger):
         model, metrics = trainer_fn(X_train, y_train, X_val, y_val, config=config, logger=logger)
 
@@ -55,11 +68,12 @@ def run(cfg_path: str) -> None:
                 try:
                     preds = model.predict_proba(X_val)[:, 1]
                 except Exception:
-                    logger.debug("Model has no predict_proba")  
+                    logger.debug("Model has no predict_proba")
                 if preds is not None:
                     metrics["pr_auc"] = compute_pr_auc(y_val, preds)
             except Exception:
                 logger.exception("Fallback metric computation failed")
+
         logger.info("Metrics: %s", metrics)
 
         # Save model if path configured
@@ -68,14 +82,17 @@ def run(cfg_path: str) -> None:
             save_model(model, out_path, logger=logger)
             logger.info("Model saved to %s", out_path)
         else:
-            logger.warning("Model not saved (no out_path or no model)") 
-    
+            logger.warning("Model not saved (no out_path or no model)")
+
     logger.info("Training complete")
+    return metrics
+
 
 def parse_args(argv=None):
     p = argparse.ArgumentParser("itrain")
-    p.add_argument(" config", "-c", default="configs/default.yaml")
+    p.add_argument("-c", "--config", default="configs/default.yaml", help="Path to YAML config")
     return p.parse_args(argv)
+
 
 if __name__ == "__main__":
     args = parse_args()
