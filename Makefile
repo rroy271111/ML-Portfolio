@@ -6,7 +6,7 @@ train:
 
 api:
 	echo "Starting API service on port 8000..."
-	uvicorn src.api.app:app --host 0.0.0.0 --port --reload
+	uvicorn src.serving.api:app --host 0.0.0.0 --port 8000 --reload
 
 test:
 	@echo "Running tests..."

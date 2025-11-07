@@ -43,5 +43,5 @@ def predict(tx: TxIn):
         probs = model.predict_proba(X)[:,1]
         return {"fraud_prob": float(probs[0])}
     except Exception as e:
-        raise HTTPException(status_code=500, details=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
