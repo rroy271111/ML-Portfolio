@@ -21,10 +21,13 @@ def build_features(df_raw: pd.DataFrame) -> pd.DataFrame:
     # df['card_tx_24h'] = ...
 
     # Encode categorical 
+    df["card_token"] = df["card_token"].astype(str).astype("category").cat.codes
+    df["device_id"] = df["device_id"].astype(str).astype("category").cat.codes
+    df["ip"] = df["ip"].astype(str).astype("category").cat.codes
     df['merchant_id'] = df['merchant_id'].astype(int)
 
     # Select features
-    feat_cols = ['amount_log', 'hour', 'dow', 'merchant_id']
+    feat_cols = ['amount_log', 'hour', 'dow', 'merchant_id','card_token','device_id','ip', 'is_large_amount']
 
     return df[feat_cols]
 
