@@ -34,6 +34,7 @@ def train_and_save(df: pd.DataFrame, config: dict, logger):
         X, y, stratify=y, test_size=config["data"]["test_size"], random_state=config["data"]["random_state"]
     )
     logger.info(f"Data split: train={X_train.shape}, val={X_val.shape}")
+    logger.info(f"Feature columns: {list(X_train.columns)}")
 
     # Model parameters from config
     model_config = config["model"]
@@ -45,10 +46,16 @@ def train_and_save(df: pd.DataFrame, config: dict, logger):
         n_estimators=params.get("n_estimators", 200),
         max_depth=params.get("max_depth", 6),
         learning_rate=params.get("learning_rate", 0.05),
+        subsample=params.get("subsample", 0.8),
+        colsample_bytree=params.get("colsample_bytree", 0.8),
+        reg_lambda=params.get("reg_lambda", 1.0),
         eval_metric=params.get("eval_metric", "logloss"),
         use_label_encoder=False,
+        #enable_categorical=True,
+        random_state=config["data"]["random_state"]
     )
 
+    # Train
     classifier.fit(
         X_train,
         y_train,

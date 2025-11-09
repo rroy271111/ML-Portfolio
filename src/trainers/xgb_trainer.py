@@ -15,8 +15,15 @@ def train(X_train, y_train, X_val, y_val, config: Dict[str, Any], logger) -> Tup
         n_estimators=model_config.get("n_estimators", 200),
         max_depth=model_config.get("max_depth", 6),
         learning_rate=model_config.get("learning_rate", 0.05),
+        subsample=model_config.get("subsample", 0.8),
+        colsample_bytree=model_config.get("colsample_bytree", 0.8),
+        gamma=model_config.get("gamma", 0),
+        reg_alpha=model_config.get("reg_alpha", 0.0),
         use_label_encoder=False,
         eval_metric=model_config.get("eval_metric", "logloss"),
+        #enable_categorical=True,
+        random_state=model_config.get("random_state", 42),
+        n_jobs=-1
     )
 
     logger.info("Fitting XGBoost model...")
