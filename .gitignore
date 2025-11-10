@@ -38,7 +38,7 @@ dist/
 *.egg-info/
 
 # Data and intermediate files
-data/
+!data/
 datasets/
 
 # Environment variables
