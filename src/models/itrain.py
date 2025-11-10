@@ -9,8 +9,10 @@ from typing import Any, Dict, Optional, Tuple
 
 import yaml
 
+from sklearn.model_selection import train_test_split
+from features.feature_builder import build_features
 from utils.logger import get_logger
-from utils.data import get_data, train_val_split, save_model
+from utils.data import get_data, save_model
 from utils.metrics import compute_pr_auc
 from utils.mlflow_utils import mlflow_start_run_if_enabled
 
@@ -47,12 +49,27 @@ def run(cfg_path: str) -> Dict[str, Any]:
         logger.error("model.trainer_path missing in config")
         raise KeyError("model.trainer_path")
 
-    df = get_data(config.get("data", {}), logger=logger)
+    data_cfg = config.get("data", {})
+    df = get_data(data_cfg, logger=logger)
     logger.info("Loaded data shape: %s", getattr(df, "shape", None))
 
-    X_train, X_val, y_train, y_val = train_val_split(df, config.get("data", {}), logger=logger)
-    logger.info(
-        "Split shapes: train=%s val=%s", getattr(X_train, "shape", None), getattr(X_val, "shape", None)
+    # Build features from the raw data
+    X = build_features(df)
+    logger.info("Built features shape: %s", getattr(X, "shape", None))  
+    logger.info(f"Feature columns: {list(X.columns)}")
+
+    # Get label from the raw data
+    y = df[data_cfg.get("target_col", "label")]
+
+    #Split the features (X) and label(y)
+    X_train, X_val, y_train, y_val = train_test_split(
+        X, y, 
+        stratify=y,
+        test_size=data_cfg.get("test_size", 0.2),
+        random_state=data_cfg.get("random_state", 42)
+    )
+    
+    logger.info("Split shapes: train=%s val=%s", getattr(X_train, "shape", None), getattr(X_val, "shape", None)
     )
 
     trainer_fn = import_trainer(trainer_path)
