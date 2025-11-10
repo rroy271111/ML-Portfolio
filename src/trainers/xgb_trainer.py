@@ -52,3 +52,24 @@ def train(X_train, y_train, X_val, y_val, config: Dict[str, Any], logger) -> Tup
     logger.info("Training complete. PR-AUC=%.4f", pr_auc if pr_auc is not None else float("nan"))
 
     return classifier, metrics
+
+if __name__ == "__main__":
+    import yaml
+    from utils.logger import get_logger
+    from utils.data import get_data, train_val_split
+
+    logger = get_logger("xgb_trainer")
+    logger.info("Starting standalone XGBoost trainer")
+
+    # Load config
+    with open("configs/default.yaml", "r") as f:
+        config = yaml.safe_load(f)
+
+    # Get data
+    df = get_data(config.get("data", {}), logger=logger)
+    X_train, X_val, y_train, y_val = train_val_split(df, config.get("data", {}), logger=logger)
+
+    # Run training
+    model, metrics = train(X_train, y_train, X_val, y_val, config=config, logger=logger)
+    logger.info(f"Training complete. Metrics: {metrics}")
+
