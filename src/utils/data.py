@@ -62,7 +62,7 @@ def get_data(data_config: Dict[str, Any], logger=None) -> pd.DataFrame:
         df = pd.read_csv(path)
     else:
         raise ValueError(f"Unknown data.mode: {mode}")
-    df = preprocess(df, logger=logger)
+    #df = preprocess(df, logger=logger)
     return df
 
 def train_val_split(df:pd.DataFrame, data_config: Dict[str, Any], logger=None) -> Tuple[pd.DataFrame, pd.Series]:
