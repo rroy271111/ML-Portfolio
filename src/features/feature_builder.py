@@ -8,22 +8,22 @@ def build_features(df_raw: pd.DataFrame) -> pd.DataFrame:
 
     df = df_raw.copy()
     # Time features
-    df['ts'] = pd.to_datetime(df['timestamp'])
-    df['hour'] = df['ts'].dt.hour
-    df['dow'] = df['ts'].dt.dayofweek
+    df['ts'] = pd.to_datetime(df['timestamp'], errors="coerce")
+    df['hour'] = df['ts'].dt.hour.fillna(0).astype(int)
+    df['dow'] = df['ts'].dt.dayofweek.fillna(0).astype(int)
 
 
     # amount features
-    df['amount_log'] = np.log1p(df['amount'])
+    df['amount_log'] = np.log1p(df['amount'].clip(lower=0))
     df['is_large_amount'] = (df['amount'] > df['amount'].quantile(0.99)).astype(int)
 
     # Aggregate placeholders (compute offline or via streaming)
     # df['card_tx_24h'] = ...
 
     # Encode categorical 
-    df["card_token"] = df["card_token"].astype(str).astype("category").cat.codes
-    df["device_id"] = df["device_id"].astype(str).astype("category").cat.codes
-    df["ip"] = df["ip"].astype(str).astype("category").cat.codes
+    df["card_token"] = df["card_token"].astype(str).astype("category").cat.codes.astype(int)
+    df["device_id"] = df["device_id"].astype(str).astype("category").cat.codes.astype(int)
+    df["ip"] = df["ip"].astype(str).astype("category").cat.codes.astype(int)
     df['merchant_id'] = df['merchant_id'].astype(int)
 
     # Select features
