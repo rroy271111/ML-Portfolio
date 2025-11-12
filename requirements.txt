@@ -1,0 +1,39 @@
+# Credit Card Fraud Detection System
+# Python 3.10+
+# Core + ML + API + Monitoring dependencies
+
+pandas==2.3
+numpy==1.26.4
+pyyaml==6.0.2
+joblib==1.4.2
+tqdm==4.66.4
+
+# Machine Learning
+scikit-learn==1.5.2
+xgboost==2.1.2
+
+# Tracking
+mlflow==2.17.1
+
+# API and Serving
+fastapi==0.115.0
+uvicorn==0.30.5
+pydantic==2.8.2
+
+# Visualisation and Monitoring
+matplotlib==3.9.2
+seaborn==0.13.2
+prometheus-client==0.20.0
+
+# Utilities and logging
+rich==13.9.1
+
+# Testing and Development
+pytest==9.0.0
+flake8==7.1.1
+black==24.10.0
+isort==5.13.2
+
+# Kafka and Docker orchestration
+kafka-python==2.0.2
+docker==7.1.0
