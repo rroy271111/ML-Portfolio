@@ -28,3 +28,21 @@ def test_preprocess_transforms_columns(test_df):
     
     for col in ["hour", "day", "month"]:
         assert col in processed.columns
+
+    # ip column should be encoded as integers
+    assert pd.api.types.is_integer_dtype(processed["ip"])
+
+
+# Test for train_val_split()
+def test_train_val_split_returns_expected_shapes(test_df):
+    cfg = {"target_col": "label", "test_size":0.25, "random_state":42}
+
+    X_train, X_val, y_train, y_val = data.train_test_split(test_df, cfg)
+
+    # total_rows = len(X_train) + len(X_val)
+    total_rows = len(X_train) + len(X_val)
+    assert total_rows == len(test_df)
+
+    # shape consistency
+    assert len(X_train) == len(y_train)
+    assert len(X_val) == len(y_val)
