@@ -130,8 +130,19 @@ def test_train_val_split_invalid_test_size():
     cfg = {"target_col": "label", "test_size": 5.0}
 
     with pytest.raises(ValueError):
-        data.train_test_split(df,cfg)
+        data.sk_train_test_split(df,cfg)
 
 # stratify fails due to extreme imbalance (must fallback)
 def test_train_val_split_stratify_fallback_on_imbalance():
-   pass 
+   df = pd.DataFrame({
+       "feat": range(10),
+       "label": [0] * 9 + [1]   # 9:1 imbalance (stratified split will fail)
+   })
+
+   cfg = {"target_col": "label", "test_size": 0.2, "random_state": 42}
+
+   X_train, X_val, y_train, y_val = data.train_val_split(df,cfg)
+
+   assert len(X_train) + len(X_val) == 10
+   assert len(X_train) == len(y_train)
+   assert len(X_val) == len(y_val)
