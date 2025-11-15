@@ -51,3 +51,8 @@ monitoring/mlflow/
 # Docker-related
 *.pid
 
+# Test cache and accidental session logs
+pytest_cache/
+*.pytest_cache/
+t_cache
+t session starts*
