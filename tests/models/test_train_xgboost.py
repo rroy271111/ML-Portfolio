@@ -132,6 +132,7 @@ def test_cli_runs(
     mock_gen,
     caplog,
 ):
+
     caplog.set_level("INFO", logger="train_xgboost")
 
     mock_load_config.return_value = {
