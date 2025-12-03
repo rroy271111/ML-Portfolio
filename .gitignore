@@ -38,8 +38,12 @@ dist/
 *.egg-info/
 
 # Data and intermediate files
-!data/
-datasets/
+!src/data/
+src/data/raw
+
+# Explicit data formats
+*.parquet
+
 
 # Environment variables
 .env
