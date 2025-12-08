@@ -5,44 +5,135 @@ from typing import Tuple, Dict, Any
 
 import mlflow
 from mlflow import MlflowClient
+import mlflow.sklearn
 
 from utils.logger import get_logger
 from utils import data as data_utils
 from utils import metrics as metrics_utils
+import yaml
+from trainers.xgb_trainer import train
 
 logger = get_logger(__name__)
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DATA_DIR = PROJECT_ROOT / "data"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+print("PROJECT_ROOT =", PROJECT_ROOT)
+DATA_DIR = PROJECT_ROOT / "src" / "data"
 
 
 def load_training_data():
     """
-    Docstring for load_training_data
+    Pipeline level data loading orchestration.
     """
+    with open(PROJECT_ROOT / "configs" / "default.yaml", "r") as f:
+        config = yaml.safe_load(f)
+
+    data_config = config.get("data", {})
+
     X_train, X_val, y_train, y_val = data_utils.load_train_val_split(
-        features_path=str(DATA_DIR / "features" / "features.parquet")
+        features_path=str(DATA_DIR / "features" / "features.parquet"),
+        data_config=data_config,
+        logger=logger,
     )
 
     return X_train, X_val, y_train, y_val
 
 
-def train_model() -> Tuple[Any, Dict[str, Any]]:
+def train_model(
+    X_train,
+    y_train,
+    X_val,
+    y_val,
+) -> Tuple[Any, Dict[str, Any]]:
     """
     Docstring for train_model
-
+    Call into XGBoost trainer and normalize output for MLflow.
     :return: Description
     :rtype: Tuple[Any, Dict[str, Any]]
     """
-    X_train, X_val, y_train, y_val = data_utils.load_train_val_split(
-        features_path=str(DATA_DIR / "features" / "features.parquet")
+    logger = get_logger("train_pipeline")
+
+    # Load config
+    with open(PROJECT_ROOT / "configs" / "default.yaml", "r") as f:
+        config = yaml.safe_load(f)
+
+    logger.info("Starting XGBoost training via trainer")
+    model, metrics = train(
+        X_train=X_train,
+        y_train=y_train,
+        X_val=X_val,
+        y_val=y_val,
+        config=config,
+        logger=logger,
     )
 
-    return X_train, X_val, y_train, y_val
+    training_info = {
+        "params": config.get("model", {}).get("params", {}),
+        "metrics": metrics,
+    }
+
+    logger.info("Training finished")
+    return model, training_info
+
+
+def evaluate(model, X_val, y_val) -> Dict[str, float]:
+    probs = model.predict_proba(X_val)[:, 1]
+
+    return {
+        "roc_auc": metrics_utils.compute_pr_auc(y_val, probs),
+        "accuracy": metrics_utils.classification_accuracy(
+            y_val, (probs > 0.5).astype(int)
+        ),
+    }
+
+
+def train_and_log(
+    model_name: str = "credit_fraud_xgb",
+    experiment_name: str = "credit_card_fraud_experiments",
+):
+    X_train, X_val, y_train, y_val = load_training_data()
+
+    model, training_info = train_model(
+        X_train=X_train,
+        y_train=y_train,
+        X_val=X_val,
+        y_val=y_val,
+    )
+
+    mlflow.set_tracking_uri(
+        # overridden by env MLFLOW_TRACKING_URI in Docker/Airflow
+        "http://localhost:5000"
+    )
+
+    mlflow.set_experiment(experiment_name)
+
+    with mlflow.start_run(
+        run_name=f"{model_name} - {datetime.utcnow().isoformat(timespec='seconds')}"
+    ):
+        # model, training_info = train_model()
+
+        # log params
+        params = training_info.get("params", {})
+        for k, v in params.items():
+            mlflow.log_param(k, v)
+
+        # eval
+        eval_metrics = evaluate(model, X_val, y_val)
+        for k, v in eval_metrics.items():
+            mlflow.log_metric(f"val_{k}", v)
+
+        mlflow.sklearn.log_model(
+            sk_model=model,
+            artifact_path="model",
+            registered_model_name=model_name,
+        )
+
+        run_id = mlflow.active_run().info.run_id
+        logger.info("Logged run to MLflow: run_id=%s", run_id)
+        return run_id, eval_metrics
 
 
 def main():
-    pass
+    run_id, _ = train_and_log()
 
 
 if __name__ == "__main__":
