@@ -54,7 +54,7 @@ def run(cfg_path: str) -> Dict[str, Any]:
     logger.info("Loaded data shape: %s", getattr(df, "shape", None))
 
     # Build features from the raw data
-    X = build_features(df)
+    X = build_features(df, include_label=False)
     logger.info("Built features shape: %s", getattr(X, "shape", None))  
     logger.info(f"Feature columns: {list(X.columns)}")
 
