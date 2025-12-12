@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 
-def build_features(df_raw: pd.DataFrame) -> pd.DataFrame:
+def build_features(df_raw: pd.DataFrame, include_label=True) -> pd.DataFrame:
     """Return a DataFrame with cleaned + derived features.
     Expected columns: ['transaction_id', 'card_token', 'amount', 'timestamp', 'merchant_id', 'device_id', 'ip']
     """
@@ -29,6 +29,7 @@ def build_features(df_raw: pd.DataFrame) -> pd.DataFrame:
     )
     df["ip"] = df["ip"].astype(str).astype("category").cat.codes.astype(int)
     df["merchant_id"] = df["merchant_id"].astype(int)
+    df["is_fraud"] = df["is_fraud"]
 
     # Select features
     feat_cols = [
@@ -41,6 +42,9 @@ def build_features(df_raw: pd.DataFrame) -> pd.DataFrame:
         "ip",
         "is_large_amount",
     ]
+
+    if include_label:
+        feat_cols.append("is_fraud")
 
     return df[feat_cols]
 
