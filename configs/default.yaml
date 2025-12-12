@@ -1,8 +1,8 @@
 data:
   mode: "synthetic" # "synthetic" or "file"
   num_rows: 5000 # used when the mode == synthetic
-  file_path: "data/train.csv" # used when mode == file
-  target_col: "label"
+  file_path: "data/train.parquet" # used when mode == file
+  target_col: "is_fraud"
   test_size: 0.2
   random_state: 42
 
