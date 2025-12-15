@@ -26,12 +26,25 @@ def train_and_save(df: pd.DataFrame, config: dict, logger):
     """
     # Build features
     df_feat = build_features(df)
-    X = df_feat
-    y = df["label"]
+    # X = df_feat
+    target_col = config["data"].get("target_col", "label")
+
+    if target_col not in df.columns:
+        raise KeyError(f"Target column '{target_col}' not found in data")
+    y = df[target_col]
+
+    if target_col in df_feat.columns:
+        X = df_feat.drop(columns=[target_col])
+    else:
+        X = df_feat
 
     # Train-test split
     X_train, X_val, y_train, y_val = train_test_split(
-        X, y, stratify=y, test_size=config["data"]["test_size"], random_state=config["data"]["random_state"]
+        X,
+        y,
+        stratify=y,
+        test_size=config["data"]["test_size"],
+        random_state=config["data"]["random_state"],
     )
     logger.info(f"Data split: train={X_train.shape}, val={X_val.shape}")
     logger.info(f"Feature columns: {list(X_train.columns)}")
@@ -51,8 +64,8 @@ def train_and_save(df: pd.DataFrame, config: dict, logger):
         reg_lambda=params.get("reg_lambda", 1.0),
         eval_metric=params.get("eval_metric", "logloss"),
         use_label_encoder=False,
-        #enable_categorical=True,
-        random_state=config["data"]["random_state"]
+        # enable_categorical=True,
+        random_state=config["data"]["random_state"],
     )
 
     # Train
