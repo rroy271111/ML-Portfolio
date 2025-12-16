@@ -132,8 +132,45 @@ def train_and_log(
         return run_id, eval_metrics
 
 
+def promote_to_production(
+    run_id: str,
+    registered_name: str = "credit_fraud_xgb",
+    alias: str = "production",
+):
+    client = MlflowClient()
+
+    # find model version created by 'run'
+    versions = client.search_model_versions(f"name='{registered_name}'")
+
+    version = None
+    for v in versions:
+        if v.run_id == run_id:
+            version = v
+            break
+
+    if version is None:
+        raise RuntimeError(f"No model version found for run_id={run_id}")
+
+    # set alias
+    client.set_registered_model_alias(
+        name=registered_name,
+        alias=alias,
+        version=version.version,
+    )
+
+    logger.info(
+        "Promoted model via alias=%s, name=%s, versions=%s",
+        alias,
+        registered_name,
+        version.version,
+    )
+
+    return version.version
+
+
 def main():
     run_id, _ = train_and_log()
+    promote_to_production(run_id)
 
 
 if __name__ == "__main__":
