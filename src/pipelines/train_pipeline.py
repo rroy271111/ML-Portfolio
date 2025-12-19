@@ -3,6 +3,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Tuple, Dict, Any
 
+from sklearn.metrics import (
+    precision_score,
+    recall_score,
+    f1_score,
+    average_precision_score,
+)
+
 import mlflow
 from mlflow import MlflowClient
 import mlflow.sklearn
@@ -77,12 +84,14 @@ def train_model(
 
 def evaluate(model, X_val, y_val) -> Dict[str, float]:
     probs = model.predict_proba(X_val)[:, 1]
+    preds = (probs > 0.5).astype(int)
 
     return {
         "roc_auc": metrics_utils.compute_pr_auc(y_val, probs),
-        "accuracy": metrics_utils.classification_accuracy(
-            y_val, (probs > 0.5).astype(int)
-        ),
+        "pr_auc": average_precision_score(y_val, probs),
+        "recall": recall_score(y_val, preds),
+        "precision": precision_score(y_val, preds),
+        "f1": f1_score(y_val, preds),
     }
 
 
