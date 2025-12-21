@@ -1,16 +1,31 @@
-
+import numpy as np
 from typing import Any, Dict, Tuple
 from xgboost import XGBClassifier
 from sklearn.metrics import average_precision_score
 
-def train(X_train, y_train, X_val, y_val, config: Dict[str, Any], logger) -> Tuple[Any, Dict[str, Any]]:
+
+def train(
+    X_train, y_train, X_val, y_val, config: Dict[str, Any], logger
+) -> Tuple[Any, Dict[str, Any]]:
     """
     Standard trainer entrypoint for XGBoost models.
-    
+
     """
     model_config = config.get("model", {}).get("params", {})
     logger.info("Building XGBClassifier with params: %s", model_config)
 
+    # class imbalance handling
+    pos = np.sum(y_train == 1)
+    neg = np.sum(y_train == 0)
+    scale_pos_weight = neg / pos if pos > 0 else 1.0
+
+    model_config["scale_pos_weight"] = scale_pos_weight
+    logger.info(
+        "Computed scale scale_pos_weight=%.3f (neg=%d, pos=%d)",
+        scale_pos_weight,
+        neg,
+        pos,
+    )
     classifier = XGBClassifier(
         n_estimators=model_config.get("n_estimators", 200),
         max_depth=model_config.get("max_depth", 6),
@@ -21,9 +36,10 @@ def train(X_train, y_train, X_val, y_val, config: Dict[str, Any], logger) -> Tup
         reg_alpha=model_config.get("reg_alpha", 0.0),
         use_label_encoder=False,
         eval_metric=model_config.get("eval_metric", "logloss"),
-        #enable_categorical=True,
+        # enable_categorical=True,
         random_state=model_config.get("random_state", 42),
-        n_jobs=-1
+        n_jobs=-1,
+        scale_pos_weight=model_config["scale_pos_weight"],
     )
 
     logger.info("Fitting XGBoost model...")
@@ -49,9 +65,12 @@ def train(X_train, y_train, X_val, y_val, config: Dict[str, Any], logger) -> Tup
         "best_iteration": getattr(classifier, "best_iteration", None),
     }
 
-    logger.info("Training complete. PR-AUC=%.4f", pr_auc if pr_auc is not None else float("nan"))
+    logger.info(
+        "Training complete. PR-AUC=%.4f", pr_auc if pr_auc is not None else float("nan")
+    )
 
     return classifier, metrics
+
 
 if __name__ == "__main__":
     import yaml
@@ -67,9 +86,10 @@ if __name__ == "__main__":
 
     # Get data
     df = get_data(config.get("data", {}), logger=logger)
-    X_train, X_val, y_train, y_val = train_val_split(df, config.get("data", {}), logger=logger)
+    X_train, X_val, y_train, y_val = train_val_split(
+        df, config.get("data", {}), logger=logger
+    )
 
     # Run training
     model, metrics = train(X_train, y_train, X_val, y_val, config=config, logger=logger)
     logger.info(f"Training complete. Metrics: {metrics}")
-
