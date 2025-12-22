@@ -51,6 +51,8 @@ src/data/raw
 # MLflow or monitoring artifacts
 mlruns/
 monitoring/mlflow/
+mlartifacts/
+mlflow.db
 
 # Docker-related
 *.pid
