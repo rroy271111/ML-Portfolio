@@ -8,6 +8,8 @@ from sklearn.metrics import (
     recall_score,
     f1_score,
     average_precision_score,
+    precision_recall_curve,
+    auc,
 )
 
 import mlflow
@@ -95,6 +97,21 @@ def evaluate(model, X_val, y_val) -> Dict[str, float]:
     }
 
 
+def find_best_threshold(y_true, probs):
+    precision, recall, thresholds = precision_recall_curve(y_true, probs)
+    f1_scores = (2 * precision * recall) / (precision + recall + 1e-8)
+    best_idx = f1_scores.argmax()
+    best_threshold = thresholds[best_idx] if best_idx < len(thresholds) else 0.5
+
+    return {
+        "best_threshold": float(best_threshold),
+        "best_precision": float(precision[best_idx]),
+        "best_recall": float(recall[best_idx]),
+        "best_f1": float(f1_scores[best_idx]),
+        "pr_auc_curve": auc(recall, precision),
+    }
+
+
 def train_and_log(
     model_name: str = "credit_fraud_xgb",
     experiment_name: str = "credit_card_fraud_experiments",
@@ -129,6 +146,16 @@ def train_and_log(
         eval_metrics = evaluate(model, X_val, y_val)
         for k, v in eval_metrics.items():
             mlflow.log_metric(f"val_{k}", v)
+
+        # threshold tuning
+        threshold_info = find_best_threshold(y_val, model.predict_proba(X_val)[:, 1])
+
+        for k, v in threshold_info.items():
+            if k != "pr_auc_curve":
+                mlflow.log_metric(f"th_{k}", v)
+
+        mlflow.log_metric("val_pr_auc_curve", threshold_info["pr_auc_curve"])
+        mlflow.log_param("selected_threshold", threshold_info["best_threshold"])
 
         mlflow.sklearn.log_model(
             sk_model=model,
