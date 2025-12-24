@@ -62,3 +62,4 @@ pytest_cache/
 *.pytest_cache/
 t_cache
 t session starts*
+pr_curve*.png
