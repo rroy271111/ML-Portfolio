@@ -2,6 +2,7 @@
 from datetime import datetime
 from pathlib import Path
 from typing import Tuple, Dict, Any
+import matplotlib.pyplot as plt
 
 from sklearn.metrics import (
     precision_score,
@@ -112,6 +113,34 @@ def find_best_threshold(y_true, probs):
     }
 
 
+def log_pr_curve_artifact(y_true, probs, best_threshold, run_dir="pr_curve.png"):
+    precision, recall, thresholds = precision_recall_curve(y_true, probs)
+
+    plt.figure(figsize=(6, 5))
+    plt.plot(recall, precision, label="PR Curve")
+
+    # mark best threshold point
+    # find closest threshold index
+    idx = (abs(thresholds - best_threshold)).argmin()
+    plt.scatter(
+        recall[idx],
+        precision[idx],
+        color="red",
+        label=f"Selected threshold = {best_threshold:.4f}",
+    )
+
+    plt.xlabel("Recall")
+    plt.ylabel("Precision")
+    plt.title("Precision-Recall Curve")
+    plt.legend()
+    plt.grid(True)
+
+    plt.savefig(run_dir, bbox_inches="tight")
+    plt.close()
+
+    mlflow.log_artifact(run_dir)
+
+
 def train_and_log(
     model_name: str = "credit_fraud_xgb",
     experiment_name: str = "credit_card_fraud_experiments",
@@ -156,6 +185,12 @@ def train_and_log(
 
         mlflow.log_metric("val_pr_auc_curve", threshold_info["pr_auc_curve"])
         mlflow.log_param("selected_threshold", threshold_info["best_threshold"])
+
+        log_pr_curve_artifact(
+            y_val,
+            model.predict_proba(X_val)[:, 1],
+            threshold_info["best_threshold"],
+        )
 
         mlflow.sklearn.log_model(
             sk_model=model,
