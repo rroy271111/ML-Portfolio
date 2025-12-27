@@ -1,0 +1,43 @@
+version: "3.9"
+
+x-airflow-common:
+  &airflow-common
+  image: apache/airflow:2.10.2
+  environment:
+    AIRFLOW_CORE_EXECUTOR: LocalExecutor
+    AIRFLOW_CORE_SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgresql:5432/airflow
+    AIRFLOW_CORE_LOAD_EXAMPLES: "False"
+    AIRFLOW_CORE_DAGS_FOLDER: /opt/airflow/dags
+    AIRFLOW_WEBSERVER_SECRET_KEY: "changeme"
+    PYTHONPATH: "/opt/project/src"
+    MLFLOW_TRACKING_URI: "http://mlflow:5000"
+  volumes:
+    - ./airflow/dags:/opt/airflow/dags
+    - ..:/opt/project
+  user: "50000.0"
+  depends_on:
+    - airflow-postgres
+    - mlflow
+
+services:
+  airflow-postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - airflow_db_data:/var/lib/postgresql/data
+  
+  mlflow:
+    image: ghrc.io/mlflow/mlflow
+    depends_on:
+      - airflow-postgres
+    environment:
+      MLFLOW_BACKEND_STORE_URI: postgresql+psycopg2://mlflow:mlflow@mlflow-db:5432/mlflow
+      MLFLOW_DEFAULT_ARTIFACT_ROOT: /mlflow-artifacts
+    volumes:
+      - ./mlflow-artifacts:/mlflow-artifacts
+    ports:
+      - "5000:5000"
+
