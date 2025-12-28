@@ -1,25 +1,25 @@
 version: "3.9"
 
-x-airflow-common:
-  &airflow-common
+x-airflow-common: &airflow-common
   image: apache/airflow:2.10.2
   environment:
-    AIRFLOW_CORE_EXECUTOR: LocalExecutor
-    AIRFLOW_CORE_SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgresql:5432/airflow
-    AIRFLOW_CORE_LOAD_EXAMPLES: "False"
-    AIRFLOW_CORE_DAGS_FOLDER: /opt/airflow/dags
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow
+    AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+    AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
     AIRFLOW_WEBSERVER_SECRET_KEY: "changeme"
     PYTHONPATH: "/opt/project/src"
     MLFLOW_TRACKING_URI: "http://mlflow:5000"
   volumes:
     - ./airflow/dags:/opt/airflow/dags
     - ..:/opt/project
-  user: "50000.0"
+  user: "50000"
   depends_on:
     - airflow-postgres
     - mlflow
 
 services:
+
   airflow-postgres:
     image: postgres:16
     environment:
@@ -28,16 +28,55 @@ services:
       POSTGRES_DB: airflow
     volumes:
       - airflow_db_data:/var/lib/postgresql/data
-  
-  mlflow:
-    image: ghrc.io/mlflow/mlflow
-    depends_on:
-      - airflow-postgres
+
+  mlflow-db:
+    image: postgres:16
     environment:
-      MLFLOW_BACKEND_STORE_URI: postgresql+psycopg2://mlflow:mlflow@mlflow-db:5432/mlflow
-      MLFLOW_DEFAULT_ARTIFACT_ROOT: /mlflow-artifacts
+      POSTGRES_USER: mlflow
+      POSTGRES_PASSWORD: mlflow
+      POSTGRES_DB: mlflow
+    volumes:
+      - mlflow_db_data:/var/lib/postgresql/data
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow
+    depends_on:
+      - mlflow-db
     volumes:
       - ./mlflow-artifacts:/mlflow-artifacts
     ports:
       - "5000:5000"
+    command: >
+      mlflow server
+      --backend-store-uri postgresql+psycopg2://mlflow:mlflow@mlflow-db:5432/mlflow
+      --default-artifact-root /mlflow-artifacts
+      --host 0.0.0.0
+      --port 5000
 
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    ports:
+      - "8080:8080"
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+
+  airflow-init:
+    <<: *airflow-common
+    command: >
+      bash -c "
+      airflow db init &&
+      airflow users create
+      --username admin
+      --password admin
+      --firstname Raj
+      --lastname Admin
+      --role Admin
+      --email admin@creditcardfrauddetection.com
+      "
+
+volumes:
+  airflow_db_data:
+  mlflow_db_data:
