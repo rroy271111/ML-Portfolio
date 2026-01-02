@@ -10,6 +10,7 @@ from pathlib import Path
 from utils.logger import get_logger
 from data.synthetic_data_generator import generate_synthetic_transactions
 from features.feature_builder import build_features_from_path as fb_build_features
+from validation.schemas.raw_transactions import raw_transactions_schema
 
 logger = get_logger(__name__)
 
@@ -31,7 +32,13 @@ def ingest_raw_data():
     raw_path.parent.mkdir(parents=True, exist_ok=True)
 
     logger.info("Generating synthetic raw data at %s", raw_path)
-    generate_synthetic_transactions(output_path=str(raw_path))
+
+    df = generate_synthetic_transactions()
+
+    df = raw_transactions_schema.validate(df)
+
+    df.to_parquet(raw_path, index=False)
+    # generate_synthetic_transactions(output_path=str(raw_path))
     logger.info("Raw data generated.")
 
 
