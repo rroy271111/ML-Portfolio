@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from validation.schemas.features import feature_schema
 
 
 def build_features(df_raw: pd.DataFrame, include_label=True) -> pd.DataFrame:
@@ -29,7 +30,9 @@ def build_features(df_raw: pd.DataFrame, include_label=True) -> pd.DataFrame:
     )
     df["ip"] = df["ip"].astype(str).astype("category").cat.codes.astype(int)
     df["merchant_id"] = df["merchant_id"].astype(int)
-    df["is_fraud"] = df["is_fraud"]
+
+    if include_label:
+        df["is_fraud"] = df["is_fraud"]
 
     # Select features
     feat_cols = [
@@ -46,7 +49,11 @@ def build_features(df_raw: pd.DataFrame, include_label=True) -> pd.DataFrame:
     if include_label:
         feat_cols.append("is_fraud")
 
-    return df[feat_cols]
+    features = df[feat_cols]
+
+    # enforce feature contract
+    features = feature_schema.validate(features)
+    return features
 
 
 def build_features_from_path(input_path: str, output_path: str) -> None:
