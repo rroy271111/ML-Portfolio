@@ -63,6 +63,9 @@ def generate_synthetic_transactions(
     # Add slight noise to avoid identical amounts
     df["amount"] += np.random.normal(0, 0.5, size=num_rows)
 
+    # Domain constraint: transactions amounts are non-negative
+    df["amount"] = df["amount"].clip(lower=0)
+
     # Ensure chronological order
     df = df.sort_values("timestamp").reset_index(drop=True)
 
